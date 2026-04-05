@@ -86,7 +86,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     //Create initial Dashboard tab
     // Use a separate function so that on first load, there is a tab
-    createTab('Dashboard', 'dashboard.html');
+    createTab('📊 工作台', 'dashboard.html');
     wireTreeLinks();
   });
 })();
