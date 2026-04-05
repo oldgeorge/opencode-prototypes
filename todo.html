@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Todo List</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    .container { max-width: 520px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+    h1 { font-size: 1.25rem; margin: 0 0 12px; }
+    form { display: flex; gap: 8px; }
+    input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    button.add { padding: 10px 14px; border: none; border-radius: 4px; background: #28a745; color: white; cursor: pointer; }
+    button.add:hover { background: #239b3a; }
+    ul { list-style: none; padding: 0; margin: 12px 0 0; }
+    li { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid #eee; }
+    li .text { flex: 1; }
+    li.completed .text { text-decoration: line-through; color: #888; }
+    button.delete { border: none; background: transparent; color: #c00; font-size: 1.1em; cursor: pointer; padding: 4px 6px; }
+    @media (max-width: 420px) {
+      .container { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Todo List</h1>
+    <form id="todoForm" autocomplete="off">
+      <input type="text" id="todoInput" placeholder="What needs to be done?" required />
+      <button type="submit" class="add" aria-label="Add task">Add</button>
+    </form>
+    <ul id="todoList"></ul>
+  </div>
+  <script>
+    const form = document.getElementById('todoForm');
+    const input = document.getElementById('todoInput');
+    const list = document.getElementById('todoList');
+
+    function createItem(text) {
+      const li = document.createElement('li');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.addEventListener('change', () => {
+        li.classList.toggle('completed', checkbox.checked);
+      });
+      const span = document.createElement('span');
+      span.className = 'text';
+      span.textContent = text;
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'delete';
+      del.textContent = '✕';
+      del.addEventListener('click', () => li.remove());
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      li.appendChild(del);
+      return li;
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (text) {
+        list.appendChild(createItem(text));
+        input.value = '';
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>
