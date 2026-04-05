@@ -1,31 +1,143 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OG.Admin Dashboard</title>
+  <title>OG.Admin - 工作台</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .stat-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    .welcome-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+    }
+    .welcome-card .text-muted {
+      color: rgba(255,255,255,0.8) !important;
+    }
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+  </style>
 </head>
 <body class="p-4">
   <div class="container-fluid">
+    <!-- 欢迎信息 -->
+    <div class="card welcome-card mb-4">
+      <div class="card-body">
+        <h3>欢迎使用 OG.Admin 管理系统</h3>
+        <p class="mb-0">功能演示原型 · 基于 Vue 3 + Element Plus + .NET 10</p>
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card stat-card p-3 border-primary border-2 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted mb-1" style="font-size:14px;">用户总数</div>
+              <div class="stat-number text-primary">12</div>
+            </div>
+            <div style="font-size:3rem;opacity:0.2;">👥</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card stat-card p-3 border-success border-2 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted mb-1" style="font-size:14px;">组织数量</div>
+              <div class="stat-number text-success">4</div>
+            </div>
+            <div style="font-size:3rem;opacity:0.2;">🏢</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card stat-card p-3 border-warning border-2 h-100">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted mb-1" style="font-size:14px;">菜单数量</div>
+              <div class="stat-number text-warning">8</div>
+            </div>
+            <div style="font-size:3rem;opacity:0.2;">📋</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷操作 -->
     <div class="row">
-      <div class="col">
-        <h3>Welcome to OG.Admin</h3>
-        <p class="text-muted">This is a static prototype dashboard.</p>
-        <div class="row g-3 mt-2">
-          <div class="col-md-4">
-            <div class="card p-3 border-primary border-2 h-100"><strong>Users</strong><div class="text-muted">Total: 12</div></div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-white">
+            <strong>快捷操作</strong>
           </div>
-          <div class="col-md-4">
-            <div class="card p-3 border-success border-2 h-100"><strong>Organizations</strong><div class="text-muted">Total: 4</div></div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-primary text-start" onclick="alert('用户管理页面')">
+                ➕ 新增用户
+              </button>
+              <button class="btn btn-outline-success text-start" onclick="alert('组织管理页面')">
+                ➕ 新增组织
+              </button>
+              <button class="btn btn-outline-warning text-start" onclick="alert('角色管理页面')">
+                🔐 角色分配
+              </button>
+            </div>
           </div>
-          <div class="col-md-4">
-            <div class="card p-3 border-warning border-2 h-100"><strong>Menus</strong><div class="text-muted">Total: 8</div></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-white">
+            <strong>系统信息</strong>
+          </div>
+          <div class="card-body">
+            <table class="table table-sm mb-0">
+              <tbody>
+                <tr>
+                  <td style="color:#666;">系统版本</td>
+                  <td class="text-end">v1.0.0</td>
+                </tr>
+                <tr>
+                  <td style="color:#666;">前端框架</td>
+                  <td class="text-end">Vue 3 + Vite</td>
+                </tr>
+                <tr>
+                  <td style="color:#666;">后端框架</td>
+                  <td class="text-end">.NET 10 WebAPI</td>
+                </tr>
+                <tr>
+                  <td style="color:#666;">数据库</td>
+                  <td class="text-end">SQLite (默认)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <script>
+    // 显示当前登录用户
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = localStorage.getItem('ogadmin_realName') || localStorage.getItem('ogadmin_user');
+      if (user) {
+        console.log('当前用户:', user);
+      }
+    });
+  </script>
 </body>
 </html>
