@@ -1,0 +1,12 @@
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/bin/Debug/net10.0/AdminSystem.Core.deps.json
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/bin/Debug/net10.0/AdminSystem.Core.dll
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/bin/Debug/net10.0/AdminSystem.Core.pdb
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.AssemblyInfoInputs.cache
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.AssemblyInfo.cs
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.csproj.CoreCompileInputs.cache
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.sourcelink.json
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.dll
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/refint/AdminSystem.Core.dll
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/AdminSystem.Core.pdb
+/Users/george/.openclaw/workspace/opencode-prototypes/OG.Admin/AdminSystem.Core/obj/Debug/net10.0/ref/AdminSystem.Core.dll
