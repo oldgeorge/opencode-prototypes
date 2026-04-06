@@ -7,122 +7,79 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script defer src="main.js"></script>
-  <style>
-    .logout-btn:hover {
-      background-color: #fee;
-      color: #c00;
-      border-color: #fcc;
-    }
-    .user-info {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-    }
-    /* 修复移动端布局 */
-    @media (max-width: 768px) {
-      .sidebar-mobile {
-        position: fixed !important;
-        left: 0;
-        top: 56px;
-        width: 250px !important;
-        height: calc(100vh - 56px) !important;
-        z-index: 1000;
-        background: #f8f9fa;
-        transform: translateX(-100%);
-        transition: transform 0.3s;
-      }
-      .sidebar-mobile.open {
-        transform: translateX(0);
-      }
-      .main-mobile {
-        width: 100% !important;
-      }
-      .mobile-nav-btn {
-        display: flex !important;
-      }
-    }
-    .mobile-nav-btn {
-      display: none;
-      padding: 8px 12px;
-      background: #304156;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .menu-overlay {
-      display: none;
-      position: fixed;
-      top: 56px;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 999;
-    }
-    .menu-overlay.show {
-      display: block;
-    }
-  </style>
 </head>
 <body>
-  <nav class="navbar navbar-light bg-light border-bottom mb-0" style="position:sticky;top:0;z-index:1001;">
-    <div class="container-fluid">
-      <button class="mobile-nav-btn me-2" id="menuToggleBtn" onclick="toggleSidebar()">
-        <span>&#9776; 菜单</span>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="mobile-nav-btn btn" id="menuToggleBtn" onclick="toggleSidebar()" style="display:none;">
+        ☰ 菜单
       </button>
-      <a class="navbar-brand logo" href="#">OG.Admin</a>
-      <div class="d-flex align-items-center gap-3">
-        <span class="user-info">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          <strong id="userNameTop">访客</strong>
-        </span>
-        <button id="logoutBtn" class="btn btn-sm logout-btn">退出登录</button>
-      </div>
+      <span class="logo">OG.Admin</span>
     </div>
-  </nav>
+    <div class="d-flex align-items-center gap-3">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">管</div>
+        <span id="userNameTop">访客</span>
+      </div>
+      <button id="logoutBtn" class="btn btn-outline">退出</button>
+    </div>
+  </header>
   
-  <!-- 移动端遮罩层 -->
+  <!-- Mobile Overlay -->
   <div class="menu-overlay" id="menuOverlay" onclick="toggleSidebar()"></div>
   
-  <div class="container-fluid p-0">
-    <div class="row no-gutters" style="min-height: calc(100vh - 56px);">
-      <!-- 侧边栏 -->
-      <aside class="col-3 border-end p-0 bg-light sidebar-mobile" id="sidebarArea">
-        <div class="p-3 border-bottom">
-          <strong>导航菜单</strong>
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebarArea">
+      <nav class="menu">
+        <div class="menu-section">
+          <div class="menu-section-title">导航</div>
+          <div class="menu-item active" data-src="dashboard.html">
+            <span class="icon">📊</span>
+            <span>工作台</span>
+          </div>
         </div>
-        <ul class="tree" id="treeMenu" style="padding:0; margin:0;">
-          <li class="tree-item" data-src="dashboard.html">📊 工作台</li>
-          <li class="tree-section">
-            <div class="section-title" onclick="toggleSection(this)">
-              <span>⚙️ 系统管理</span>
-              <span class="arrow">▶</span>
-            </div>
-            <ul class="tree-children">
-              <li class="tree-item" data-src="user-list.html">👥 用户管理</li>
-              <li class="tree-item" data-src="org-tree.html">🏢 组织管理</li>
-              <li class="tree-item" data-src="menu-tree.html">📋 菜单管理</li>
-              <li class="tree-item" data-src="role-list.html">🔐 角色管理</li>
-            </ul>
-          </li>
-        </ul>
-      </aside>
+        
+        <div class="menu-section open">
+          <div class="menu-section-title">系统管理</div>
+          <div class="menu-item" data-src="user-list.html" onclick="navigateTo('user-list.html', this)">
+            <span class="icon">👥</span>
+            <span>用户管理</span>
+          </div>
+          <div class="menu-item" data-src="org-tree.html" onclick="navigateTo('org-tree.html', this)">
+            <span class="icon">🏢</span>
+            <span>组织管理</span>
+          </div>
+          <div class="menu-item" data-src="menu-tree.html" onclick="navigateTo('menu-tree.html', this)">
+            <span class="icon">📋</span>
+            <span>菜单管理</span>
+          </div>
+          <div class="menu-item" data-src="role-list.html" onclick="navigateTo('role-list.html', this)">
+            <span class="icon">🔐</span>
+            <span>角色管理</span>
+          </div>
+        </div>
+      </nav>
+    </aside>
+    
+    <!-- Content Area -->
+    <main class="content-area">
+      <!-- Tabs -->
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-src="dashboard.html" onclick="switchTab('dashboard.html', this)">
+          📊 工作台
+        </div>
+      </div>
       
-      <!-- 主内容区 -->
-      <main class="col-9 p-2 main-mobile">
-        <div id="tabs" class="d-flex flex-wrap align-items-center" style="gap:6px; padding:6px; border-bottom:1px solid #dee2e6; overflow:auto; white-space: nowrap; background:#fff;"></div>
-        <iframe id="contentFrame" src="dashboard.html"></iframe>
-      </main>
-    </div>
+      <!-- Iframe -->
+      <iframe class="content-iframe" id="contentFrame" src="dashboard.html"></iframe>
+    </main>
   </div>
 
   <script>
-    // 移动端菜单切换
+    // Mobile menu toggle
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebarArea');
       const overlay = document.getElementById('menuOverlay');
@@ -130,34 +87,90 @@
       overlay.classList.toggle('show');
     }
 
-    // 菜单分组展开/折叠
-    function toggleSection(el) {
-      const section = el.parentElement;
-      const arrow = el.querySelector('.arrow');
-      section.classList.toggle('open');
-      arrow.textContent = section.classList.contains('open') ? '▼' : '▶';
+    // Navigate to page
+    function navigateTo(page, el) {
+      // Update active menu item
+      document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+      el.classList.add('active');
+      
+      // Switch tab
+      switchTab(page, null);
+      
+      // Close mobile sidebar
+      toggleSidebar();
     }
 
-    // 页面加载时初始化
+    // Switch tab
+    function switchTab(page, el) {
+      const tabs = document.getElementById('tabs');
+      const frame = document.getElementById('contentFrame');
+      
+      // Check if tab already exists
+      let existingTab = document.querySelector(`.tab[data-src="${page}"]`);
+      
+      if (!existingTab) {
+        // Create new tab
+        const pageName = page.replace('.html', '');
+        const names = {
+          'dashboard': '📊 工作台',
+          'user-list': '👥 用户管理',
+          'org-tree': '🏢 组织管理',
+          'menu-tree': '📋 菜单管理',
+          'role-list': '🔐 角色管理'
+        };
+        
+        const newTab = document.createElement('div');
+        newTab.className = 'tab fade-in';
+        newTab.dataset.src = page;
+        newTab.innerHTML = `${names[pageName] || page} <span class="close" onclick="closeTab(event, '${page}')">✕</span>`;
+        newTab.onclick = function() { switchTab(page, this); };
+        tabs.appendChild(newTab);
+        existingTab = newTab;
+      }
+      
+      // Update active tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      existingTab.classList.add('active');
+      
+      // Load page
+      frame.src = page;
+    }
+
+    // Close tab
+    function closeTab(event, page) {
+      event.stopPropagation();
+      const tab = document.querySelector(`.tab[data-src="${page}"]`);
+      if (tab) {
+        tab.remove();
+        // If this was active tab, switch to dashboard
+        if (tab.classList.contains('active')) {
+          document.querySelector('.tab').click();
+        }
+      }
+    }
+
+    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-      // 检查是否已登录，未登录则跳转登录页
+      // Check login
       if (localStorage.getItem('ogadmin_loggedIn') !== 'true') {
         location.href = 'login.html';
         return;
       }
       
+      // Show user name
       const user = localStorage.getItem('ogadmin_realName') || localStorage.getItem('ogadmin_user') || '访客';
       document.getElementById('userNameTop').textContent = user;
+      document.getElementById('userAvatar').textContent = user.charAt(0);
       
-      // 默认展开系统管理
-      const firstSection = document.querySelector('.tree-section');
-      if (firstSection) {
-        firstSection.classList.add('open');
-        const arrow = firstSection.querySelector('.arrow');
-        if (arrow) arrow.textContent = '▼';
-      }
+      // Handle menu clicks
+      document.querySelectorAll('.menu-item[data-src]').forEach(item => {
+        item.addEventListener('click', function(e) {
+          if (this.querySelector('.arrow')) return; // Skip section toggle
+          navigateTo(this.dataset.src, this);
+        });
+      });
       
-      // 退出登录
+      // Logout
       document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('ogadmin_loggedIn');
         localStorage.removeItem('ogadmin_user');
