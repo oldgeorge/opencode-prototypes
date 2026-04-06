@@ -20,11 +20,58 @@
       border-radius: 20px;
       font-size: 13px;
     }
+    /* 修复移动端布局 */
+    @media (max-width: 768px) {
+      .sidebar-mobile {
+        position: fixed !important;
+        left: 0;
+        top: 56px;
+        width: 250px !important;
+        height: calc(100vh - 56px) !important;
+        z-index: 1000;
+        background: #f8f9fa;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+      .sidebar-mobile.open {
+        transform: translateX(0);
+      }
+      .main-mobile {
+        width: 100% !important;
+      }
+      .mobile-nav-btn {
+        display: flex !important;
+      }
+    }
+    .mobile-nav-btn {
+      display: none;
+      padding: 8px 12px;
+      background: #304156;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .menu-overlay {
+      display: none;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+    .menu-overlay.show {
+      display: block;
+    }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-light bg-light border-bottom mb-0">
+  <nav class="navbar navbar-light bg-light border-bottom mb-0" style="position:sticky;top:0;z-index:1001;">
     <div class="container-fluid">
+      <button class="mobile-nav-btn me-2" id="menuToggleBtn" onclick="toggleSidebar()">
+        <span>&#9776; 菜单</span>
+      </button>
       <a class="navbar-brand logo" href="#">OG.Admin</a>
       <div class="d-flex align-items-center gap-3">
         <span class="user-info">
@@ -38,16 +85,24 @@
       </div>
     </div>
   </nav>
+  
+  <!-- 移动端遮罩层 -->
+  <div class="menu-overlay" id="menuOverlay" onclick="toggleSidebar()"></div>
+  
   <div class="container-fluid p-0">
     <div class="row no-gutters" style="min-height: calc(100vh - 56px);">
-      <aside class="col-3 border-end p-0 bg-light" id="sidebarArea" style="min-height:100vh;">
+      <!-- 侧边栏 -->
+      <aside class="col-3 border-end p-0 bg-light sidebar-mobile" id="sidebarArea">
         <div class="p-3 border-bottom">
           <strong>导航菜单</strong>
         </div>
         <ul class="tree" id="treeMenu" style="padding:0; margin:0;">
           <li class="tree-item" data-src="dashboard.html">📊 工作台</li>
           <li class="tree-section">
-            <div class="section-title">系统管理</div>
+            <div class="section-title" onclick="toggleSection(this)">
+              <span>⚙️ 系统管理</span>
+              <span class="arrow">▶</span>
+            </div>
             <ul class="tree-children">
               <li class="tree-item" data-src="user-list.html">👥 用户管理</li>
               <li class="tree-item" data-src="org-tree.html">🏢 组织管理</li>
@@ -57,14 +112,33 @@
           </li>
         </ul>
       </aside>
-      <main class="col-9 p-2">
-        <div id="tabs" class="d-flex flex-wrap align-items-center" style="gap:6px; padding:6px; border-bottom:1px solid #dee2e6; overflow:auto; white-space: nowrap;"></div>
+      
+      <!-- 主内容区 -->
+      <main class="col-9 p-2 main-mobile">
+        <div id="tabs" class="d-flex flex-wrap align-items-center" style="gap:6px; padding:6px; border-bottom:1px solid #dee2e6; overflow:auto; white-space: nowrap; background:#fff;"></div>
         <iframe id="contentFrame" src="dashboard.html"></iframe>
       </main>
     </div>
   </div>
+
   <script>
-    // 初始化：从localStorage获取用户名
+    // 移动端菜单切换
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebarArea');
+      const overlay = document.getElementById('menuOverlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('show');
+    }
+
+    // 菜单分组展开/折叠
+    function toggleSection(el) {
+      const section = el.parentElement;
+      const arrow = el.querySelector('.arrow');
+      section.classList.toggle('open');
+      arrow.textContent = section.classList.contains('open') ? '▼' : '▶';
+    }
+
+    // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
       // 检查是否已登录，未登录则跳转登录页
       if (localStorage.getItem('ogadmin_loggedIn') !== 'true') {
@@ -74,6 +148,14 @@
       
       const user = localStorage.getItem('ogadmin_realName') || localStorage.getItem('ogadmin_user') || '访客';
       document.getElementById('userNameTop').textContent = user;
+      
+      // 默认展开系统管理
+      const firstSection = document.querySelector('.tree-section');
+      if (firstSection) {
+        firstSection.classList.add('open');
+        const arrow = firstSection.querySelector('.arrow');
+        if (arrow) arrow.textContent = '▼';
+      }
       
       // 退出登录
       document.getElementById('logoutBtn').addEventListener('click', () => {

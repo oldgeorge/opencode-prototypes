@@ -14,9 +14,11 @@ body { margin: 0; background: var(--bg); font-family: -apple-system, BlinkMacSys
 .tree-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
 .tree-item:hover { background: #e9f0ff; }
 .tree-section { padding: 6px 12px; border-bottom: 1px solid var(--border); }
-.tree-section .section-title { font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.tree-section .section-title { font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+.tree-section .arrow { font-size: 10px; transition: transform 0.2s; }
 .tree-children { list-style: none; padding-left: 18px; display: none; }
-.tree.open .tree-children { display: block; }
+.tree-section.open .tree-children { display: block; }
+.tree-section.open .arrow { transform: rotate(180deg); }
 
 /* Tabs */
 #tabs { display: flex; align-items: center; padding: 6px; gap: 6px; overflow: auto; border-bottom: 1px solid var(--border); }
