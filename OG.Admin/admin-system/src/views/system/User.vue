@@ -1,116 +1,172 @@
 <template>
-  <div class="user-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>用户管理</span>
-          <el-button type="primary" @click="handleAdd">
-            <el-icon><Plus /></el-icon>新增用户
-          </el-button>
-        </div>
-      </template>
-
-      <div class="search-bar">
-        <el-form :inline="true" :model="queryForm">
-          <el-form-item label="关键词">
-            <el-input v-model="queryForm.keyword" placeholder="搜索用户名/昵称" clearable />
-          </el-form-item>
-          <el-form-item label="状态">
-            <el-select v-model="queryForm.status" placeholder="全部" clearable>
-              <el-option label="启用" :value="1" />
-              <el-option label="禁用" :value="0" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">查询</el-button>
-            <el-button @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
+  <div class="user-page">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div class="header-left">
+        <h2 class="page-title">用户管理</h2>
+        <span class="page-desc">管理系统用户，支持增删查改</span>
       </div>
+      <el-button type="primary" @click="openAddDialog">
+        <el-icon><Plus /></el-icon>
+        新增用户
+      </el-button>
+    </div>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="nickname" label="昵称" min-width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="phone" label="手机号" min-width="120" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索用户名、姓名或邮箱..."
+        clearable
+        class="search-input"
+        @clear="handleSearch"
+        @keyup.enter="handleSearch"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="userList"
+        stripe
+        class="user-table"
+      >
+        <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column prop="username" label="用户名" min-width="120">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '启用' : '禁用' }}
+            <div class="user-cell">
+              <el-avatar :size="32" class="user-avatar">
+                {{ row.username?.charAt(0)?.toUpperCase() }}
+              </el-avatar>
+              <div class="user-info">
+                <span class="username">{{ row.username }}</span>
+                <span class="user-id">ID: {{ row.id }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="realName" label="姓名" min-width="100" />
+        <el-table-column prop="email" label="邮箱" min-width="160" />
+        <el-table-column prop="phone" label="手机" min-width="120" />
+        <el-table-column prop="orgName" label="所属组织" min-width="100" />
+        <el-table-column prop="roleName" label="角色" min-width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.roleId === 1 ? 'danger' : 'primary'" size="small">
+              {{ row.roleName || '-' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="orgName" label="所属组织" min-width="120" />
-        <el-table-column prop="createTime" label="创建时间" min-width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
-            <el-button link :type="row.status === 1 ? 'warning' : 'success'" @click="handleToggleStatus(row)">
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
+            <el-switch
+              v-model="row.status"
+              :active-value="1"
+              :inactive-value="0"
+              @change="handleStatusChange(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="{ row }">
+            <div class="action-buttons">
+              <el-button type="primary" link @click="openEditDialog(row)">
+                <el-icon><Edit /></el-icon>
+                编辑
+              </el-button>
+              <el-button type="danger" link @click="handleDelete(row)">
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
+      <!-- 分页 -->
       <div class="pagination">
         <el-pagination
-          v-model:current-page="queryForm.pageNum"
-          v-model:page-size="queryForm.pageSize"
-          :total="total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+          v-model:current-page="pagination.pageNum"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          background
+          @size-change="loadUsers"
+          @current-change="loadUsers"
         />
       </div>
-    </el-card>
+    </div>
 
+    <!-- 新增/编辑弹窗 -->
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑用户' : '新增用户'"
-      width="600px"
+      width="560px"
+      :close-on-click-modal="false"
+      class="user-dialog"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+      <el-form
+        ref="formRef"
+        :model="userForm"
+        :rules="formRules"
+        label-width="90px"
+      >
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" :disabled="isEdit" />
+          <el-input
+            v-model="userForm.username"
+            placeholder="请输入用户名"
+            :disabled="isEdit"
+          />
         </el-form-item>
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="昵称" prop="nickname">
-          <el-input v-model="form.nickname" />
+        <el-form-item label="姓名" prop="realName">
+          <el-input v-model="userForm.realName" placeholder="请输入姓名" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" />
+          <el-input v-model="userForm.email" placeholder="请输入邮箱" />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" />
+        <el-form-item label="手机" prop="phone">
+          <el-input v-model="userForm.phone" placeholder="请输入手机号" />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="form.status">
+        <el-form-item label="所属组织" prop="orgId">
+          <el-select v-model="userForm.orgId" placeholder="请选择组织" style="width: 100%">
+            <el-option label="技术部" :value="1" />
+            <el-option label="运营部" :value="2" />
+            <el-option label="市场部" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="角色" prop="roleId">
+          <el-select v-model="userForm.roleId" placeholder="请选择角色" style="width: 100%">
+            <el-option label="超级管理员" :value="1" />
+            <el-option label="管理员" :value="2" />
+            <el-option label="普通用户" :value="3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="!isEdit" label="密码" prop="password">
+          <el-input
+            v-model="userForm.password"
+            type="password"
+            placeholder="请输入密码"
+            show-password
+          />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="userForm.status">
             <el-radio :label="1">启用</el-radio>
             <el-radio :label="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="角色" prop="roleIds">
-          <el-select v-model="form.roleIds" multiple placeholder="请选择角色">
-            <el-option
-              v-for="role in roleList"
-              :key="role.id"
-              :label="role.roleName"
-              :value="role.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" :rows="2" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitLoading">确定</el-button>
+        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
+          确定
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -119,117 +175,90 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { userApi } from '@/api/user'
-import { roleApi } from '@/api/role'
-import type { UserDto, CreateUserRequest, RoleSimpleDto } from '@/types'
+import type { UserDto, CreateUserRequest } from '@/types'
 
 const loading = ref(false)
-const tableData = ref<UserDto[]>([])
-const total = ref(0)
-
-const queryForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined,
-  pageNum: 1,
-  pageSize: 10,
-})
-
+const submitLoading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const submitLoading = ref(false)
-const formRef = ref<FormInstance>()
-const currentId = ref<number>()
+const formRef = ref()
 
-const form = reactive<CreateUserRequest>({
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  phone: '',
-  status: 1,
-  roleIds: [],
-  remark: '',
+const searchKeyword = ref('')
+const userList = ref<UserDto[]>([])
+const pagination = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  total: 0
 })
 
-const rules: FormRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
-  ],
+const userForm = reactive<CreateUserRequest & { id?: number }>({
+  username: '',
+  realName: '',
+  email: '',
+  phone: '',
+  orgId: undefined,
+  roleId: undefined,
+  password: '',
+  status: 1
+})
+
+const formRules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '密码至少6位', trigger: 'blur' }]
 }
 
-const roleList = ref<RoleSimpleDto[]>([])
-
-const loadRoles = async () => {
-  const res = await roleApi.getAll()
-  roleList.value = res
-}
-
-const loadData = async () => {
+const loadUsers = async () => {
   loading.value = true
   try {
-    const res = await userApi.getPageList(queryForm)
-    tableData.value = res.items
-    total.value = res.total
+    const res = await userApi.getPageList({
+      keyword: searchKeyword.value,
+      pageNum: pagination.pageNum,
+      pageSize: pagination.pageSize
+    })
+    userList.value = res.items
+    pagination.total = res.total
   } catch (error) {
-    console.error(error)
+    ElMessage.error('加载用户列表失败')
   } finally {
     loading.value = false
   }
 }
 
 const handleSearch = () => {
-  queryForm.pageNum = 1
-  loadData()
+  pagination.pageNum = 1
+  loadUsers()
 }
 
-const handleReset = () => {
-  queryForm.keyword = ''
-  queryForm.status = undefined
-  queryForm.pageNum = 1
-  loadData()
-}
-
-const handleSizeChange = () => {
-  queryForm.pageNum = 1
-  loadData()
-}
-
-const handleCurrentChange = () => {
-  loadData()
-}
-
-const handleAdd = () => {
+const openAddDialog = () => {
   isEdit.value = false
-  Object.assign(form, {
+  Object.assign(userForm, {
+    id: undefined,
     username: '',
-    password: '',
-    nickname: '',
+    realName: '',
     email: '',
     phone: '',
-    status: 1,
-    roleIds: [],
-    remark: '',
+    orgId: undefined,
+    roleId: undefined,
+    password: '',
+    status: 1
   })
   dialogVisible.value = true
 }
 
-const handleEdit = async (row: UserDto) => {
+const openEditDialog = (row: UserDto) => {
   isEdit.value = true
-  currentId.value = row.id
-  const res = await userApi.getById(row.id)
-  Object.assign(form, {
-    username: res.username,
-    nickname: res.nickname,
-    email: res.email,
-    phone: res.phone,
-    status: res.status,
-    roleIds: res.roles?.map(r => r.id) || [],
-    remark: res.remark,
+  Object.assign(userForm, {
+    id: row.id,
+    username: row.username,
+    realName: row.realName,
+    email: row.email,
+    phone: row.phone,
+    orgId: row.orgId,
+    roleId: row.roleId,
+    password: '',
+    status: row.status
   })
   dialogVisible.value = true
 }
@@ -240,15 +269,15 @@ const handleSubmit = async () => {
     if (!valid) return
     submitLoading.value = true
     try {
-      if (isEdit.value && currentId.value) {
-        await userApi.update(currentId.value, form)
+      if (isEdit.value && userForm.id) {
+        await userApi.update(userForm.id, userForm)
         ElMessage.success('更新成功')
       } else {
-        await userApi.create(form)
+        await userApi.create(userForm)
         ElMessage.success('创建成功')
       }
       dialogVisible.value = false
-      loadData()
+      loadUsers()
     } catch (error: any) {
       ElMessage.error(error.message || '操作失败')
     } finally {
@@ -257,48 +286,148 @@ const handleSubmit = async () => {
   })
 }
 
-const handleDelete = async (row: UserDto) => {
-  await ElMessageBox.confirm('确定要删除该用户吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-  await userApi.delete(row.id)
-  ElMessage.success('删除成功')
-  loadData()
+const handleStatusChange = async (row: UserDto) => {
+  try {
+    await userApi.updateStatus(row.id, row.status)
+    ElMessage.success(row.status === 1 ? '已启用' : '已禁用')
+  } catch (error) {
+    row.status = row.status === 1 ? 0 : 1
+    ElMessage.error('状态更新失败')
+  }
 }
 
-const handleToggleStatus = async (row: UserDto) => {
-  const newStatus = row.status === 1 ? 0 : 1
-  await userApi.updateStatus(row.id, newStatus)
-  ElMessage.success(newStatus === 1 ? '已启用' : '已禁用')
-  loadData()
+const handleDelete = async (row: UserDto) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除用户 "${row.username}" 吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await userApi.delete(row.id)
+    ElMessage.success('删除成功')
+    loadUsers()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
 onMounted(() => {
-  loadData()
-  loadRoles()
+  loadUsers()
 })
 </script>
 
-<style scoped>
-.user-container {
-  padding: 20px;
+<style scoped lang="scss">
+.user-page {
+  padding: 0;
 }
 
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.search-bar {
   margin-bottom: 20px;
 }
 
+.header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.page-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  width: 320px;
+}
+
+.table-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.user-table {
+  :deep(.el-table__header th) {
+    background: #f9fafb;
+    color: #374151;
+    font-weight: 600;
+  }
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.user-id {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
 .pagination {
-  margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.user-dialog {
+  :deep(.el-dialog__header) {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    margin: 0;
+    padding: 20px 24px;
+    
+    .el-dialog__title {
+      color: #fff;
+    }
+    
+    .el-dialog__headerbtn {
+      .el-icon {
+        color: #fff;
+      }
+    }
+  }
 }
 </style>

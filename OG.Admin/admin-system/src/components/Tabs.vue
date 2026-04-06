@@ -4,17 +4,18 @@
       <div
         v-for="tab in tabs"
         :key="tab.path"
-        :class="['tab-item', { active: tab.path === activeTab }]"
-        @click="handleTabClick(tab)"
+        :class="['tab-item', { active: activeTab === tab.path }]"
+        @click="switchTab(tab)"
       >
+        <span class="tab-icon">{{ getTabIcon(tab.path) }}</span>
         <span class="tab-title">{{ tab.title }}</span>
-        <el-icon
+        <span
           v-if="tab.closable !== false"
           class="tab-close"
-          @click.stop="handleTabClose(tab.path)"
+          @click.stop="closeTab(tab)"
         >
-          <Close />
-        </el-icon>
+          <el-icon><Close /></el-icon>
+        </span>
       </div>
     </div>
   </div>
@@ -25,7 +26,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Close } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
-import type { RouteTab } from '@/types'
 
 const router = useRouter()
 const appStore = useAppStore()
@@ -33,38 +33,53 @@ const appStore = useAppStore()
 const tabs = computed(() => appStore.tabs)
 const activeTab = computed(() => appStore.activeTab)
 
-const handleTabClick = (tab: RouteTab) => {
+const getTabIcon = (path: string) => {
+  if (path.includes('dashboard')) return '📊'
+  if (path.includes('user')) return '👥'
+  if (path.includes('role')) return '🔐'
+  if (path.includes('menu')) return '📋'
+  if (path.includes('org')) return '🏢'
+  return '📄'
+}
+
+const switchTab = (tab: any) => {
   appStore.setActiveTab(tab.path)
   router.push(tab.path)
 }
 
-const handleTabClose = (path: string) => {
-  appStore.removeTab(path)
-  if (path === activeTab.value) {
-    const currentTab = tabs.value.find(t => t.path === appStore.activeTab)
-    if (currentTab) {
-      router.push(currentTab.path)
-    }
+const closeTab = (tab: any) => {
+  appStore.removeTab(tab.path)
+  const lastTab = tabs.value[tabs.value.length - 1]
+  if (lastTab) {
+    router.push(lastTab.path)
+  } else {
+    router.push('/dashboard')
   }
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .tabs-container {
-  flex: 1;
+  height: 100%;
   overflow: hidden;
 }
 
 .tabs-scroll {
   display: flex;
   align-items: center;
-  height: 40px;
-  overflow-x: auto;
+  height: 100%;
   gap: 4px;
-}
+  overflow-x: auto;
+  padding: 4px 0;
 
-.tabs-scroll::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 2px;
+  }
 }
 
 .tab-item {
@@ -72,30 +87,59 @@ const handleTabClose = (path: string) => {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #f0f2f5;
-  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.2s ease;
   font-size: 13px;
-  color: #666;
-  transition: all 0.3s;
+  color: #6b7280;
+
+  &:hover {
+    background: #f5f6fa;
+    color: #374151;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+
+    .tab-close {
+      opacity: 1;
+      color: rgba(255, 255, 255, 0.8);
+
+      &:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
 }
 
-.tab-item:hover {
-  background: #e8e8e8;
+.tab-icon {
+  font-size: 14px;
 }
 
-.tab-item.active {
-  background: #409EFF;
-  color: #fff;
+.tab-title {
+  font-weight: 500;
 }
 
 .tab-close {
-  font-size: 12px;
-}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.2s ease;
+  margin-left: 2px;
 
-.tab-close:hover {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
+  .el-icon {
+    font-size: 12px;
+  }
 }
 </style>
