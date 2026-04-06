@@ -5,20 +5,26 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string
-  user: UserDto
-  expireIn: number
+  code: number
+  message: string
+  data?: {
+    token: string
+    user: UserDto
+  }
 }
 
 export interface CurrentUserResponse {
-  user: UserDto
-  permissions: string[]
-  roles: string[]
+  code: number
+  message: string
+  data?: {
+    user: UserDto
+  }
 }
 
 export interface UserDto {
   id: number
   username: string
+  realName?: string
   nickname?: string
   email?: string
   phone?: string
@@ -26,6 +32,8 @@ export interface UserDto {
   status: number
   orgId?: number
   orgName?: string
+  roleId?: number
+  roleName?: string
   createTime?: string
   updateTime?: string
   remark?: string
@@ -34,7 +42,8 @@ export interface UserDto {
 
 export interface CreateUserRequest {
   username: string
-  password: string
+  password?: string
+  realName?: string
   nickname?: string
   email?: string
   phone?: string
@@ -42,10 +51,11 @@ export interface CreateUserRequest {
   status?: number
   orgId?: number
   remark?: string
-  roleIds?: number[]
+  roleId?: number
 }
 
 export interface UpdateUserRequest {
+  realName?: string
   nickname?: string
   email?: string
   phone?: string
@@ -53,7 +63,7 @@ export interface UpdateUserRequest {
   status?: number
   orgId?: number
   remark?: string
-  roleIds?: number[]
+  roleId?: number
 }
 
 export interface UserQueryRequest {
@@ -106,10 +116,10 @@ export interface MenuDto {
   parentId?: number
   sort: number
   status: number
-  isVisible: boolean
-  isCache: boolean
-  isAffix: boolean
-  isKeepAlive: boolean
+  isVisible?: boolean
+  isCache?: boolean
+  isAffix?: boolean
+  isKeepAlive?: boolean
   createTime?: string
   updateTime?: string
   remark?: string
@@ -192,13 +202,24 @@ export interface UpdateRoleRequest {
   menuIds?: number[]
 }
 
-export interface PagedResult<T> {
+export interface AssignPermissionsRequest {
+  menuIds: number[]
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string
+  newPassword: string
+}
+
+// 分页结果
+export interface PageResult<T> {
   items: T[]
   total: number
   pageNum: number
   pageSize: number
 }
 
+// API 统一响应格式
 export interface ApiResponse<T = any> {
   code: number
   message: string

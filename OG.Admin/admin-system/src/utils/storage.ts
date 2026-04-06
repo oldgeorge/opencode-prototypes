@@ -1,6 +1,6 @@
-const TOKEN_KEY = 'token'
-const USER_KEY = 'user'
-const REMEMBER_KEY = 'remember'
+const TOKEN_KEY = 'ogadmin_token'
+const USER_KEY = 'ogadmin_user'
+const REMEMBER_KEY = 'ogadmin_remember'
 
 export const storage = {
   getToken(): string | null {
@@ -44,5 +44,6 @@ export const storage = {
   clearAll(): void {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(REMEMBER_KEY)
   },
 }

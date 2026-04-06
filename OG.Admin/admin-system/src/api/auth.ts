@@ -1,16 +1,24 @@
 import request from '@/utils/request'
+import { mockApi, useMock } from './mock'
 import type { LoginRequest, LoginResponse, CurrentUserResponse } from '@/types'
 
 export const authApi = {
-  login(data: LoginRequest) {
+  async login(data: LoginRequest): Promise<LoginResponse> {
+    if (useMock) {
+      return mockApi.login(data)
+    }
     return request.post<any, LoginResponse>('/auth/login', data)
   },
 
-  logout() {
+  async logout() {
+    if (useMock) return { code: 200, message: 'success' }
     return request.post('/auth/logout')
   },
 
-  getCurrentUser() {
+  async getCurrentUser(): Promise<CurrentUserResponse> {
+    if (useMock) {
+      return mockApi.getCurrentUser()
+    }
     return request.get<any, CurrentUserResponse>('/auth/current')
   },
 }

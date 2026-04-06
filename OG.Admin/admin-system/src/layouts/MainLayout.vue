@@ -2,8 +2,8 @@
   <el-container class="main-layout">
     <el-aside :width="collapsed ? '64px' : '220px'" class="aside">
       <div class="logo" :class="{ collapsed }">
-        <img src="/vite.svg" alt="logo" class="logo-img" />
-        <span v-if="!collapsed">OG.Admin</span>
+        <span class="logo-text" v-if="!collapsed">OG.Admin</span>
+        <span class="logo-text collapsed" v-else>OG</span>
       </div>
       <SideMenu />
     </el-aside>
@@ -124,9 +124,10 @@ onMounted(() => {
   gap: 0;
 }
 
-.logo-img {
-  width: 32px;
-  height: 32px;
+.logo-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
 }
 
 .header {

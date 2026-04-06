@@ -1,36 +1,55 @@
 import request from '@/utils/request'
-import type { RoleDto, CreateRoleRequest, UpdateRoleRequest, MenuDto, PagedResult } from '@/types'
+import { mockApi, useMock } from './mock'
+import type { RoleDto, CreateRoleRequest, UpdateRoleRequest, PageResult } from '@/types'
 
 export const roleApi = {
-  getPageList(params?: { keyword?: string; pageNum?: number; pageSize?: number }) {
-    return request.get<any, PagedResult<RoleDto>>('/roles', { params })
+  async getPageList(params?: { keyword?: string; pageNum?: number; pageSize?: number }): Promise<PageResult<RoleDto>> {
+    if (useMock) {
+      return mockApi.getRoles(params)
+    }
+    return request.get<any, PageResult<RoleDto>>('/roles', { params })
   },
 
-  getAll() {
+  async getAll(): Promise<RoleDto[]> {
+    if (useMock) {
+      const result = await mockApi.getRoles()
+      return result.items
+    }
     return request.get<any, RoleDto[]>('/roles/all')
   },
 
-  getById(id: number) {
+  async getById(id: number): Promise<RoleDto | undefined> {
+    if (useMock) {
+      return mockApi.getRoleById(id)
+    }
     return request.get<any, RoleDto>(`/roles/${id}`)
   },
 
-  create(data: CreateRoleRequest) {
-    return request.post<any, RoleDto>('/roles', data)
+  async create(data: CreateRoleRequest): Promise<number> {
+    if (useMock) {
+      return mockApi.createRole(data as Partial<RoleDto>)
+    }
+    return request.post<any, number>('/roles', data)
   },
 
-  update(id: number, data: UpdateRoleRequest) {
-    return request.put<any, RoleDto>(`/roles/${id}`, data)
+  async update(id: number, data: UpdateRoleRequest): Promise<void> {
+    if (useMock) {
+      return mockApi.updateRole(id, data as Partial<RoleDto>)
+    }
+    return request.put(`/roles/${id}`, data)
   },
 
-  delete(id: number) {
+  async delete(id: number): Promise<void> {
+    if (useMock) {
+      return mockApi.deleteRole(id)
+    }
     return request.delete(`/roles/${id}`)
   },
 
-  getRoleMenus(roleId: number) {
-    return request.get<any, MenuDto[]>(`/roles/${roleId}/menus`)
-  },
-
-  assignPermissions(roleId: number, menuIds: number[]) {
+  async assignPermissions(roleId: number, menuIds: number[]): Promise<void> {
+    if (useMock) {
+      return mockApi.assignPermissions(roleId, menuIds)
+    }
     return request.put(`/roles/${roleId}/menus`, { menuIds })
   },
 }
