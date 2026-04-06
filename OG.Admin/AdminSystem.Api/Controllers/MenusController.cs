@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -35,55 +37,32 @@ public class MenusController : ControllerBase
     public async Task<ApiResponse<MenuDto>> GetById(long id)
     {
         var result = await _menuService.GetByIdAsync(id);
-
         if (result == null)
         {
             return ApiResponse<MenuDto>.Fail("菜单不存在", 404);
         }
-
         return ApiResponse<MenuDto>.Success(result);
     }
 
     [HttpPost]
-    public async Task<ApiResponse<MenuDto>> Create([FromBody] CreateMenuRequest request)
+    public async Task<ApiResponse<long>> Create([FromBody] CreateMenuRequest request)
     {
-        try
-        {
-            var result = await _menuService.CreateAsync(request);
-            return ApiResponse<MenuDto>.Success(result, "创建成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<MenuDto>.Fail(ex.Message, 400);
-        }
+        var id = await _menuService.CreateAsync(request);
+        return ApiResponse<long>.Success(id, "创建成功");
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse<MenuDto>> Update(long id, [FromBody] UpdateMenuRequest request)
+    public async Task<ApiResponse> Update(long id, [FromBody] UpdateMenuRequest request)
     {
-        try
-        {
-            var result = await _menuService.UpdateAsync(id, request);
-            return ApiResponse<MenuDto>.Success(result, "更新成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<MenuDto>.Fail(ex.Message, 400);
-        }
+        await _menuService.UpdateAsync(id, request);
+        return ApiResponse.Success("更新成功");
     }
 
     [HttpDelete("{id}")]
     public async Task<ApiResponse> Delete(long id)
     {
-        try
-        {
-            await _menuService.DeleteAsync(id);
-            return ApiResponse.Success("删除成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse.Fail(ex.Message, 400);
-        }
+        await _menuService.DeleteAsync(id);
+        return ApiResponse.Success("删除成功");
     }
 
     [HttpGet("role/{roleId}")]

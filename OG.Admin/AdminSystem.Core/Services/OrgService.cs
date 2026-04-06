@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Entities;
 using AdminSystem.Core.Interfaces;
@@ -41,7 +45,7 @@ public class OrgService : IOrgService
         return org != null ? MapToDto(org) : null;
     }
 
-    public async Task<OrgDto> CreateAsync(CreateOrgRequest request)
+    public async Task<long> CreateAsync(CreateOrgRequest request)
     {
         var org = new SysOrg
         {
@@ -54,11 +58,11 @@ public class OrgService : IOrgService
             Remark = request.Remark
         };
 
-        await _db.Insertable(org).ExecuteCommandAsync();
-        return (await GetByIdAsync(org.Id))!;
+        var orgId = await _db.Insertable(org).ExecuteReturnSnowflakeIdAsync();
+        return orgId;
     }
 
-    public async Task<OrgDto> UpdateAsync(long id, UpdateOrgRequest request)
+    public async Task UpdateAsync(long id, UpdateOrgRequest request)
     {
         var org = await _db.Queryable<SysOrg>()
             .Where(x => x.Id == id)
@@ -78,11 +82,19 @@ public class OrgService : IOrgService
         org.Remark = request.Remark;
 
         await _db.Updateable(org).ExecuteCommandAsync();
-        return (await GetByIdAsync(id))!;
     }
 
     public async Task DeleteAsync(long id)
     {
+        var org = await _db.Queryable<SysOrg>()
+            .Where(x => x.Id == id)
+            .FirstAsync();
+
+        if (org == null)
+        {
+            throw new Exception("组织不存在");
+        }
+
         var hasChildren = await _db.Queryable<SysOrg>()
             .Where(x => x.ParentId == id)
             .AnyAsync();
@@ -109,7 +121,7 @@ public class OrgService : IOrgService
     private List<OrgDto> BuildTree(List<SysOrg> list, long parentId)
     {
         return list
-            .Where(x => x.ParentId == parentId)
+            .Where(x => x.ParentId == parentId || (x.ParentId == null && parentId == 0))
             .Select(x => new OrgDto
             {
                 Id = x.Id,

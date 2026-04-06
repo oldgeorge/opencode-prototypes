@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Entities;
 using AdminSystem.Core.Interfaces;
@@ -14,63 +18,34 @@ public class RoleService : IRoleService
         _db = db;
     }
 
-    public async Task<PagedResult<RoleDto>> GetPageListAsync(string? keyword, int pageNum, int pageSize)
+    public async Task<PageResult<RoleDto>> GetPageListAsync(string? keyword, int page, int size)
     {
         var query = _db.Queryable<SysRole>()
-            .WhereIF(!string.IsNullOrEmpty(keyword), x => x.RoleName.Contains(keyword!) || x.RoleCode!.Contains(keyword!))
-            .OrderBy(x => x.Sort);
+            .WhereIF(!string.IsNullOrEmpty(keyword), x => 
+                x.RoleName.Contains(keyword!) || 
+                (x.RoleCode != null && x.RoleCode.Contains(keyword!)))
+            .OrderBy(x => x.Sort, OrderByType.Asc);
 
         var total = await query.CountAsync();
-        var list = await query.ToPageListAsync(pageNum, pageSize);
+        var list = await query.ToPageListAsync(page, size);
+        var items = list.Select(MapToDto).ToList();
 
-        var items = new List<RoleDto>();
-        foreach (var role in list)
-        {
-            var menuIds = await _db.Queryable<SysRoleMenu>()
-                .Where(x => x.RoleId == role.Id)
-                .Select(x => x.MenuId)
-                .ToListAsync();
-
-            items.Add(new RoleDto
-            {
-                Id = role.Id,
-                RoleName = role.RoleName,
-                RoleCode = role.RoleCode,
-                Sort = role.Sort,
-                Status = role.Status,
-                CreateTime = role.CreateTime,
-                UpdateTime = role.UpdateTime,
-                Remark = role.Remark,
-                MenuIds = menuIds
-            });
-        }
-
-        return new PagedResult<RoleDto>
+        return new PageResult<RoleDto>
         {
             Items = items,
             Total = total,
-            PageNum = pageNum,
-            PageSize = pageSize
+            PageNum = page,
+            PageSize = size
         };
     }
 
     public async Task<List<RoleDto>> GetAllAsync()
     {
         var list = await _db.Queryable<SysRole>()
-            .OrderBy(x => x.Sort)
+            .OrderBy(x => x.Sort, OrderByType.Asc)
             .ToListAsync();
 
-        return list.Select(x => new RoleDto
-        {
-            Id = x.Id,
-            RoleName = x.RoleName,
-            RoleCode = x.RoleCode,
-            Sort = x.Sort,
-            Status = x.Status,
-            CreateTime = x.CreateTime,
-            UpdateTime = x.UpdateTime,
-            Remark = x.Remark
-        }).ToList();
+        return list.Select(MapToDto).ToList();
     }
 
     public async Task<RoleDto?> GetByIdAsync(long id)
@@ -89,6 +64,10 @@ public class RoleService : IRoleService
             .Select(x => x.MenuId)
             .ToListAsync();
 
+        var menus = await _db.Queryable<SysMenu>()
+            .Where(x => menuIds.Contains(x.Id))
+            .ToListAsync();
+
         return new RoleDto
         {
             Id = role.Id,
@@ -99,11 +78,16 @@ public class RoleService : IRoleService
             CreateTime = role.CreateTime,
             UpdateTime = role.UpdateTime,
             Remark = role.Remark,
-            MenuIds = menuIds
+            MenuIds = menuIds,
+            Menus = menus.Select(m => new MenuSimpleDto
+            {
+                Id = m.Id,
+                MenuName = m.MenuName
+            }).ToList()
         };
     }
 
-    public async Task<RoleDto> CreateAsync(CreateRoleRequest request)
+    public async Task<long> CreateAsync(CreateRoleRequest request)
     {
         if (!string.IsNullOrEmpty(request.RoleCode))
         {
@@ -127,23 +111,23 @@ public class RoleService : IRoleService
             Remark = request.Remark
         };
 
-        await _db.Insertable(role).ExecuteCommandAsync();
+        var roleId = await _db.Insertable(role).ExecuteReturnSnowflakeIdAsync();
 
         if (request.MenuIds != null && request.MenuIds.Count > 0)
         {
             var roleMenus = request.MenuIds.Select(menuId => new SysRoleMenu
             {
-                RoleId = role.Id,
+                RoleId = roleId,
                 MenuId = menuId
             }).ToList();
 
             await _db.Insertable(roleMenus).ExecuteCommandAsync();
         }
 
-        return (await GetByIdAsync(role.Id))!;
+        return roleId;
     }
 
-    public async Task<RoleDto> UpdateAsync(long id, UpdateRoleRequest request)
+    public async Task UpdateAsync(long id, UpdateRoleRequest request)
     {
         var role = await _db.Queryable<SysRole>()
             .Where(x => x.Id == id)
@@ -189,17 +173,24 @@ public class RoleService : IRoleService
 
             await _db.Insertable(roleMenus).ExecuteCommandAsync();
         }
-
-        return (await GetByIdAsync(id))!;
     }
 
     public async Task DeleteAsync(long id)
     {
-        await _db.Deleteable<SysRoleMenu>()
+        var role = await _db.Queryable<SysRole>()
+            .Where(x => x.Id == id)
+            .FirstAsync();
+
+        if (role == null)
+        {
+            throw new Exception("角色不存在");
+        }
+
+        await _db.Deleteable<SysUserRole>()
             .Where(x => x.RoleId == id)
             .ExecuteCommandAsync();
 
-        await _db.Deleteable<SysUserRole>()
+        await _db.Deleteable<SysRoleMenu>()
             .Where(x => x.RoleId == id)
             .ExecuteCommandAsync();
 
@@ -208,47 +199,22 @@ public class RoleService : IRoleService
             .ExecuteCommandAsync();
     }
 
-    public async Task<List<MenuDto>> GetRoleMenusAsync(long roleId)
+    public async Task AssignPermissionsAsync(long roleId, List<long> menuIds)
     {
-        var menuIds = await _db.Queryable<SysRoleMenu>()
-            .Where(x => x.RoleId == roleId)
-            .Select(x => x.MenuId)
-            .ToListAsync();
+        var role = await _db.Queryable<SysRole>()
+            .Where(x => x.Id == roleId)
+            .FirstAsync();
 
-        var menus = await _db.Queryable<SysMenu>()
-            .Where(x => menuIds.Contains(x.Id))
-            .OrderBy(x => x.Sort)
-            .ToListAsync();
-
-        return menus.Select(x => new MenuDto
+        if (role == null)
         {
-            Id = x.Id,
-            MenuName = x.MenuName,
-            MenuCode = x.MenuCode,
-            MenuType = x.MenuType,
-            Path = x.Path,
-            Component = x.Component,
-            Icon = x.Icon,
-            ParentId = x.ParentId,
-            Sort = x.Sort,
-            Status = x.Status,
-            IsVisible = x.IsVisible,
-            IsCache = x.IsCache,
-            IsAffix = x.IsAffix,
-            IsKeepAlive = x.IsKeepAlive,
-            CreateTime = x.CreateTime,
-            UpdateTime = x.UpdateTime,
-            Remark = x.Remark
-        }).ToList();
-    }
+            throw new Exception("角色不存在");
+        }
 
-    public async Task<bool> AssignPermissionsAsync(long roleId, List<long> menuIds)
-    {
         await _db.Deleteable<SysRoleMenu>()
             .Where(x => x.RoleId == roleId)
             .ExecuteCommandAsync();
 
-        if (menuIds.Count > 0)
+        if (menuIds != null && menuIds.Count > 0)
         {
             var roleMenus = menuIds.Select(menuId => new SysRoleMenu
             {
@@ -258,7 +224,20 @@ public class RoleService : IRoleService
 
             await _db.Insertable(roleMenus).ExecuteCommandAsync();
         }
+    }
 
-        return true;
+    private RoleDto MapToDto(SysRole role)
+    {
+        return new RoleDto
+        {
+            Id = role.Id,
+            RoleName = role.RoleName,
+            RoleCode = role.RoleCode,
+            Sort = role.Sort,
+            Status = role.Status,
+            CreateTime = role.CreateTime,
+            UpdateTime = role.UpdateTime,
+            Remark = role.Remark
+        };
     }
 }

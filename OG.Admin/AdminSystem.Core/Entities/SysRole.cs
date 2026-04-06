@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using SqlSugar;
 
 namespace AdminSystem.Core.Entities;
@@ -25,7 +27,7 @@ public class SysRole
     [SugarColumn(Length = 500)]
     public string? Remark { get; set; }
 
-    [Navigate(NavigateType.ManyToMany, typeof(SysRoleMenu))]
+    [Navigate(NavigateType.ManyToMany, "SysUserRole")]
     public List<SysMenu>? Menus { get; set; }
 
     [SugarColumn(IsIgnore = true)]

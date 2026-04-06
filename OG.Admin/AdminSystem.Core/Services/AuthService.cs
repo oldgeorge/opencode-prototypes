@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,18 +16,16 @@ namespace AdminSystem.Core.Services;
 public class AuthService : IAuthService
 {
     private readonly ISqlSugarClient _db;
-    private readonly JwtSettings _jwtSettings;
 
-    public AuthService(ISqlSugarClient db, JwtSettings jwtSettings)
+    public AuthService(ISqlSugarClient db)
     {
         _db = db;
-        _jwtSettings = jwtSettings;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         var user = await _db.Queryable<SysUser>()
-            .Where(x => x.Username == request.Username)
+            .Where(u => u.Username == request.Username)
             .FirstAsync();
 
         if (user == null)
@@ -31,8 +33,7 @@ public class AuthService : IAuthService
             throw new Exception("用户名或密码错误");
         }
 
-        var passwordHash = HashPassword(request.Password);
-        if (user.Password != passwordHash)
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
         {
             throw new Exception("用户名或密码错误");
         }
@@ -43,7 +44,7 @@ public class AuthService : IAuthService
         }
 
         var token = GenerateToken(user);
-        var expireIn = (int)TimeSpan.FromDays(_jwtSettings.ExpireDays).TotalSeconds;
+        var expireIn = request.RememberMe ? 7 * 24 * 60 * 60 : 2 * 60 * 60;
 
         return new LoginResponse
         {
@@ -86,24 +87,22 @@ public class AuthService : IAuthService
 
     public string GenerateToken(SysUser user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
+        var secretKey = "YourSecretKeyHere12345678901234567890";
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim("nickname", user.Nickname ?? user.Username)
         };
-
         var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
+            issuer: "AdminSystem",
+            audience: "AdminSystem",
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(_jwtSettings.ExpireDays),
+            expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: credentials
         );
-
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
@@ -121,22 +120,13 @@ public class AuthService : IAuthService
             OrgId = user.OrgId,
             CreateTime = user.CreateTime,
             UpdateTime = user.UpdateTime,
-            Remark = user.Remark
+            Remark = user.Remark,
+            Roles = user.Roles?.Select(r => new RoleSimpleDto
+            {
+                Id = r.Id,
+                RoleName = r.RoleName,
+                RoleCode = r.RoleCode
+            }).ToList()
         };
     }
-
-    private string HashPassword(string password)
-    {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
-    }
-}
-
-public class JwtSettings
-{
-    public string SecretKey { get; set; } = "YourSecretKeyForJwtTokenMustBeAtLeast32CharactersLong!";
-    public string Issuer { get; set; } = "AdminSystem";
-    public string Audience { get; set; } = "AdminSystem";
-    public int ExpireDays { get; set; } = 7;
 }

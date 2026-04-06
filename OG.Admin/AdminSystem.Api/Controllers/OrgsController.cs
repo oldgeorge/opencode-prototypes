@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -35,54 +37,31 @@ public class OrgsController : ControllerBase
     public async Task<ApiResponse<OrgDto>> GetById(long id)
     {
         var result = await _orgService.GetByIdAsync(id);
-
         if (result == null)
         {
             return ApiResponse<OrgDto>.Fail("组织不存在", 404);
         }
-
         return ApiResponse<OrgDto>.Success(result);
     }
 
     [HttpPost]
-    public async Task<ApiResponse<OrgDto>> Create([FromBody] CreateOrgRequest request)
+    public async Task<ApiResponse<long>> Create([FromBody] CreateOrgRequest request)
     {
-        try
-        {
-            var result = await _orgService.CreateAsync(request);
-            return ApiResponse<OrgDto>.Success(result, "创建成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<OrgDto>.Fail(ex.Message, 400);
-        }
+        var id = await _orgService.CreateAsync(request);
+        return ApiResponse<long>.Success(id, "创建成功");
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse<OrgDto>> Update(long id, [FromBody] UpdateOrgRequest request)
+    public async Task<ApiResponse> Update(long id, [FromBody] UpdateOrgRequest request)
     {
-        try
-        {
-            var result = await _orgService.UpdateAsync(id, request);
-            return ApiResponse<OrgDto>.Success(result, "更新成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<OrgDto>.Fail(ex.Message, 400);
-        }
+        await _orgService.UpdateAsync(id, request);
+        return ApiResponse.Success("更新成功");
     }
 
     [HttpDelete("{id}")]
     public async Task<ApiResponse> Delete(long id)
     {
-        try
-        {
-            await _orgService.DeleteAsync(id);
-            return ApiResponse.Success("删除成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse.Fail(ex.Message, 400);
-        }
+        await _orgService.DeleteAsync(id);
+        return ApiResponse.Success("删除成功");
     }
 }

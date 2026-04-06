@@ -1,15 +1,17 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 
 namespace AdminSystem.Core.Interfaces;
 
 public interface IRoleService
 {
-    Task<PagedResult<RoleDto>> GetPageListAsync(string? keyword, int pageNum, int pageSize);
+    Task<PageResult<RoleDto>> GetPageListAsync(string? keyword, int page, int size);
     Task<List<RoleDto>> GetAllAsync();
     Task<RoleDto?> GetByIdAsync(long id);
-    Task<RoleDto> CreateAsync(CreateRoleRequest request);
-    Task<RoleDto> UpdateAsync(long id, UpdateRoleRequest request);
+    Task<long> CreateAsync(CreateRoleRequest request);
+    Task UpdateAsync(long id, UpdateRoleRequest request);
     Task DeleteAsync(long id);
-    Task<List<MenuDto>> GetRoleMenusAsync(long roleId);
-    Task<bool> AssignPermissionsAsync(long roleId, List<long> menuIds);
+    Task AssignPermissionsAsync(long roleId, List<long> menuIds);
 }

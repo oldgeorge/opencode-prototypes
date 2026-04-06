@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -18,13 +20,13 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ApiResponse<PagedResult<RoleDto>>> GetPageList(
+    public async Task<ApiResponse<PageResult<RoleDto>>> GetPageList(
         [FromQuery] string? keyword,
         [FromQuery] int pageNum = 1,
         [FromQuery] int pageSize = 10)
     {
         var result = await _roleService.GetPageListAsync(keyword, pageNum, pageSize);
-        return ApiResponse<PagedResult<RoleDto>>.Success(result);
+        return ApiResponse<PageResult<RoleDto>>.Success(result);
     }
 
     [HttpGet("all")]
@@ -38,75 +40,38 @@ public class RolesController : ControllerBase
     public async Task<ApiResponse<RoleDto>> GetById(long id)
     {
         var result = await _roleService.GetByIdAsync(id);
-
         if (result == null)
         {
             return ApiResponse<RoleDto>.Fail("角色不存在", 404);
         }
-
         return ApiResponse<RoleDto>.Success(result);
     }
 
     [HttpPost]
-    public async Task<ApiResponse<RoleDto>> Create([FromBody] CreateRoleRequest request)
+    public async Task<ApiResponse<long>> Create([FromBody] CreateRoleRequest request)
     {
-        try
-        {
-            var result = await _roleService.CreateAsync(request);
-            return ApiResponse<RoleDto>.Success(result, "创建成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<RoleDto>.Fail(ex.Message, 400);
-        }
+        var id = await _roleService.CreateAsync(request);
+        return ApiResponse<long>.Success(id, "创建成功");
     }
 
     [HttpPut("{id}")]
-    public async Task<ApiResponse<RoleDto>> Update(long id, [FromBody] UpdateRoleRequest request)
+    public async Task<ApiResponse> Update(long id, [FromBody] UpdateRoleRequest request)
     {
-        try
-        {
-            var result = await _roleService.UpdateAsync(id, request);
-            return ApiResponse<RoleDto>.Success(result, "更新成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse<RoleDto>.Fail(ex.Message, 400);
-        }
+        await _roleService.UpdateAsync(id, request);
+        return ApiResponse.Success("更新成功");
     }
 
     [HttpDelete("{id}")]
     public async Task<ApiResponse> Delete(long id)
     {
-        try
-        {
-            await _roleService.DeleteAsync(id);
-            return ApiResponse.Success("删除成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse.Fail(ex.Message, 400);
-        }
-    }
-
-    [HttpGet("{id}/menus")]
-    public async Task<ApiResponse<List<MenuDto>>> GetRoleMenus(long id)
-    {
-        var result = await _roleService.GetRoleMenusAsync(id);
-        return ApiResponse<List<MenuDto>>.Success(result);
+        await _roleService.DeleteAsync(id);
+        return ApiResponse.Success("删除成功");
     }
 
     [HttpPut("{id}/menus")]
     public async Task<ApiResponse> AssignPermissions(long id, [FromBody] AssignPermissionsRequest request)
     {
-        try
-        {
-            await _roleService.AssignPermissionsAsync(id, request.MenuIds);
-            return ApiResponse.Success("权限分配成功");
-        }
-        catch (Exception ex)
-        {
-            return ApiResponse.Fail(ex.Message, 400);
-        }
+        await _roleService.AssignPermissionsAsync(id, request.MenuIds);
+        return ApiResponse.Success("权限分配成功");
     }
 }

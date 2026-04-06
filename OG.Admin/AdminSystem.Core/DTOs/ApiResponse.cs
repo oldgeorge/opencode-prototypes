@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 namespace AdminSystem.Core.DTOs;
 
 public class ApiResponse<T>
@@ -20,6 +22,14 @@ public class ApiResponse<T>
     {
         return new ApiResponse<T> { Code = code, Message = message };
     }
+}
+
+public class PageResult<T>
+{
+    public List<T> Items { get; set; } = new();
+    public long Total { get; set; }
+    public int PageNum { get; set; }
+    public int PageSize { get; set; }
 }
 
 public class ApiResponse : ApiResponse<object>

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Entities;
 using AdminSystem.Core.Interfaces;
@@ -14,20 +18,22 @@ public class UserService : IUserService
         _db = db;
     }
 
-    public async Task<PagedResult<UserDto>> GetPageListAsync(UserQueryRequest request)
+    public async Task<PageResult<UserDto>> GetPageListAsync(UserQueryRequest request)
     {
         var query = _db.Queryable<SysUser>()
             .Includes(x => x.Roles)
-            .WhereIF(!string.IsNullOrEmpty(request.Keyword), x => x.Username.Contains(request.Keyword!) || x.Nickname!.Contains(request.Keyword!))
+            .WhereIF(!string.IsNullOrEmpty(request.Keyword), x => 
+                x.Username.Contains(request.Keyword!) || 
+                (x.Nickname != null && x.Nickname.Contains(request.Keyword!)))
             .WhereIF(request.OrgId.HasValue, x => x.OrgId == request.OrgId)
             .WhereIF(request.Status.HasValue, x => x.Status == request.Status)
             .OrderBy(x => x.CreateTime, OrderByType.Desc);
 
         var total = await query.CountAsync();
         var list = await query.ToPageListAsync(request.PageNum, request.PageSize);
-
         var items = list.Select(MapToDto).ToList();
-        return new PagedResult<UserDto>
+
+        return new PageResult<UserDto>
         {
             Items = items,
             Total = total,
@@ -46,7 +52,7 @@ public class UserService : IUserService
         return user != null ? MapToDto(user) : null;
     }
 
-    public async Task<UserDto> CreateAsync(CreateUserRequest request)
+    public async Task<long> CreateAsync(CreateUserRequest request)
     {
         var exists = await _db.Queryable<SysUser>()
             .Where(x => x.Username == request.Username)
@@ -60,7 +66,7 @@ public class UserService : IUserService
         var user = new SysUser
         {
             Username = request.Username,
-            Password = HashPassword(request.Password),
+            Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Nickname = request.Nickname,
             Email = request.Email,
             Phone = request.Phone,
@@ -71,23 +77,23 @@ public class UserService : IUserService
             Remark = request.Remark
         };
 
-        await _db.Insertable(user).ExecuteCommandAsync();
+        var userId = await _db.Insertable(user).ExecuteReturnSnowflakeIdAsync();
 
         if (request.RoleIds != null && request.RoleIds.Count > 0)
         {
             var userRoles = request.RoleIds.Select(roleId => new SysUserRole
             {
-                UserId = user.Id,
+                UserId = userId,
                 RoleId = roleId
             }).ToList();
 
             await _db.Insertable(userRoles).ExecuteCommandAsync();
         }
 
-        return (await GetByIdAsync(user.Id))!;
+        return userId;
     }
 
-    public async Task<UserDto> UpdateAsync(long id, UpdateUserRequest request)
+    public async Task UpdateAsync(long id, UpdateUserRequest request)
     {
         var user = await _db.Queryable<SysUser>()
             .Where(x => x.Id == id)
@@ -123,12 +129,19 @@ public class UserService : IUserService
 
             await _db.Insertable(userRoles).ExecuteCommandAsync();
         }
-
-        return (await GetByIdAsync(id))!;
     }
 
     public async Task DeleteAsync(long id)
     {
+        var user = await _db.Queryable<SysUser>()
+            .Where(x => x.Id == id)
+            .FirstAsync();
+
+        if (user == null)
+        {
+            throw new Exception("用户不存在");
+        }
+
         await _db.Deleteable<SysUserRole>()
             .Where(x => x.UserId == id)
             .ExecuteCommandAsync();
@@ -138,15 +151,7 @@ public class UserService : IUserService
             .ExecuteCommandAsync();
     }
 
-    public async Task<bool> UpdateStatusAsync(long id, int status)
-    {
-        return await _db.Updateable<SysUser>()
-            .SetColumns(x => x.Status == status)
-            .Where(x => x.Id == id)
-            .ExecuteCommandAsync() > 0;
-    }
-
-    public async Task<bool> ChangePasswordAsync(long id, string oldPassword, string newPassword)
+    public async Task UpdateStatusAsync(long id, int status)
     {
         var user = await _db.Queryable<SysUser>()
             .Where(x => x.Id == id)
@@ -154,19 +159,39 @@ public class UserService : IUserService
 
         if (user == null)
         {
-            return false;
+            throw new Exception("用户不存在");
         }
 
-        if (user.Password != HashPassword(oldPassword))
+        user.Status = status;
+        user.UpdateTime = DateTime.Now;
+
+        await _db.Updateable(user)
+            .UpdateColumns(x => new { x.Status, x.UpdateTime })
+            .ExecuteCommandAsync();
+    }
+
+    public async Task ChangePasswordAsync(long id, string oldPassword, string newPassword)
+    {
+        var user = await _db.Queryable<SysUser>()
+            .Where(x => x.Id == id)
+            .FirstAsync();
+
+        if (user == null)
+        {
+            throw new Exception("用户不存在");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(oldPassword, user.Password))
         {
             throw new Exception("原密码错误");
         }
 
-        return await _db.Updateable<SysUser>()
-            .SetColumns(x => x.Password == HashPassword(newPassword))
-            .SetColumns(x => x.UpdateTime == DateTime.Now)
-            .Where(x => x.Id == id)
-            .ExecuteCommandAsync() > 0;
+        user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.UpdateTime = DateTime.Now;
+
+        await _db.Updateable(user)
+            .UpdateColumns(x => new { x.Password, x.UpdateTime })
+            .ExecuteCommandAsync();
     }
 
     private UserDto MapToDto(SysUser user)
@@ -191,12 +216,5 @@ public class UserService : IUserService
                 RoleCode = r.RoleCode
             }).ToList()
         };
-    }
-
-    private string HashPassword(string password)
-    {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
     }
 }

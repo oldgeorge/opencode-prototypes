@@ -1,82 +1,62 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Text;
-using AdminSystem.Core.Entities;
-using AdminSystem.Core.Interfaces;
-using AdminSystem.Core.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SqlSugar;
+using AdminSystem.Core.DTOs;
+using AdminSystem.Core.Entities;
+using AdminSystem.Core.Interfaces;
+using AdminSystem.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Data Source=adminsystem.db";
-
-var dbType = builder.Configuration.GetValue<string>("DatabaseType") ?? "sqlite";
-
-builder.Services.AddSingleton<JwtSettings>(sp =>
+// Add services to the container
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
 {
-    var config = sp.GetRequiredService<IConfiguration>();
-    return new JwtSettings
-    {
-        SecretKey = config["Jwt:SecretKey"] ?? "YourSecretKeyForJwtTokenMustBeAtLeast32CharactersLong!",
-        Issuer = config["Jwt:Issuer"] ?? "AdminSystem",
-        Audience = config["Jwt:Audience"] ?? "AdminSystem",
-        ExpireDays = config.GetValue<int>("Jwt:ExpireDays", 7)
-    };
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AdminSystem API", Version = "v1" });
 });
 
-ISqlSugarClient sqlSugar;
-switch (dbType.ToLower())
+// Database configuration
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Data Source=adminsystem.db";
+var dbTypeStr = builder.Configuration.GetValue<string>("DatabaseType") ?? "sqlite";
+
+DbType dbType = dbTypeStr.ToLower() switch
 {
-    case "mysql":
-        sqlSugar = new SqlSugarClient(new ConnectionConfig
-        {
-            ConnectionString = connectionString,
-            DbType = DbType.MySql,
-            IsAutoCloseConnection = true,
-            InitKeyType = InitKeyType.Attribute
-        });
-        break;
-    case "postgresql":
-        sqlSugar = new SqlSugarClient(new ConnectionConfig
-        {
-            ConnectionString = connectionString,
-            DbType = DbType.PostgreSQL,
-            IsAutoCloseConnection = true,
-            InitKeyType = InitKeyType.Attribute
-        });
-        break;
-    case "sqlserver":
-        sqlSugar = new SqlSugarClient(new ConnectionConfig
-        {
-            ConnectionString = connectionString,
-            DbType = DbType.SqlServer,
-            IsAutoCloseConnection = true,
-            InitKeyType = InitKeyType.Attribute
-        });
-        break;
-    default:
-        sqlSugar = new SqlSugarClient(new ConnectionConfig
-        {
-            ConnectionString = connectionString,
-            DbType = DbType.Sqlite,
-            IsAutoCloseConnection = true,
-            InitKeyType = InitKeyType.Attribute
-        });
-        break;
-}
+    "mysql" => DbType.MySql,
+    "postgresql" => DbType.PostgreSQL,
+    "sqlserver" => DbType.SqlServer,
+    _ => DbType.Sqlite
+};
+
+var sqlSugar = new SqlSugarClient(new ConnectionConfig
+{
+    ConnectionString = connectionString,
+    DbType = dbType,
+    IsAutoCloseConnection = true,
+    InitKeyType = InitKeyType.Attribute
+});
 
 builder.Services.AddSingleton<ISqlSugarClient>(sqlSugar);
 
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IOrgService, OrgService>();
-builder.Services.AddScoped<IMenuService, MenuService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
+// JWT Settings
+var jwtSettings = new JwtSettings
+{
+    SecretKey = builder.Configuration["Jwt:SecretKey"] ?? "YourSecretKeyForJwtTokenMustBeAtLeast32CharactersLong!",
+    Issuer = builder.Configuration["Jwt:Issuer"] ?? "AdminSystem",
+    Audience = builder.Configuration["Jwt:Audience"] ?? "AdminSystem",
+    ExpireDays = builder.Configuration.GetValue<int>("Jwt:ExpireDays", 7)
+};
+builder.Services.AddSingleton(jwtSettings);
 
-var jwtSettings = builder.Services.BuildServiceProvider().GetRequiredService<JwtSettings>();
-
+// Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -92,38 +72,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
-
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "AdminSystem API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
-
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -134,48 +85,59 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Register services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IOrgService, OrgService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+
 var app = builder.Build();
 
-await InitDatabase(sqlSugar);
+// Initialize database
+InitDatabase(sqlSugar);
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Configure the HTTP request pipeline
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "AdminSystem API V1");
-    c.RoutePrefix = "swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("AllowAll");
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
 
-async Task InitDatabase(ISqlSugarClient db)
+void InitDatabase(ISqlSugarClient db)
 {
-    db.CreateTableAsync<SysUser>().Wait();
-    db.CreateTableAsync<SysOrg>().Wait();
-    db.CreateTableAsync<SysMenu>().Wait();
-    db.CreateTableAsync<SysRole>().Wait();
-    db.CreateTableAsync<SysUserRole>().Wait();
-    db.CreateTableAsync<SysRoleMenu>().Wait();
+    // Create tables using CodeFirst
+    db.CodeFirst.InitTables<SysUser>();
+    db.CodeFirst.InitTables<SysOrg>();
+    db.CodeFirst.InitTables<SysMenu>();
+    db.CodeFirst.InitTables<SysRole>();
+    db.CodeFirst.InitTables<SysUserRole>();
+    db.CodeFirst.InitTables<SysRoleMenu>();
 
-    var userCount = await db.Queryable<SysUser>().CountAsync();
+    // Seed data if empty
+    var userCount = db.Queryable<SysUser>().Count();
     if (userCount == 0)
     {
+        // Insert admin user
         var adminUser = new SysUser
         {
             Username = "admin",
-            Password = HashPassword("123456"),
+            Password = BCrypt.Net.BCrypt.HashPassword("123456"),
             Nickname = "超级管理员",
+            Email = "admin@example.com",
             Status = 1,
             CreateTime = DateTime.Now
         };
-        await db.Insertable(adminUser).ExecuteCommandAsync();
+        db.Insertable(adminUser).ExecuteCommand();
 
+        // Insert orgs
         var orgs = new List<SysOrg>
         {
             new() { OrgName = "总公司", OrgCode = "HQ", ParentId = 0, Sort = 1, Status = 1, CreateTime = DateTime.Now },
@@ -183,8 +145,9 @@ async Task InitDatabase(ISqlSugarClient db)
             new() { OrgName = "运营部", OrgCode = "OPS", ParentId = 1, Sort = 2, Status = 1, CreateTime = DateTime.Now },
             new() { OrgName = "财务部", OrgCode = "FIN", ParentId = 1, Sort = 3, Status = 1, CreateTime = DateTime.Now }
         };
-        await db.Insertable(orgs).ExecuteCommandAsync();
+        db.Insertable(orgs).ExecuteCommand();
 
+        // Insert menus
         var menus = new List<SysMenu>
         {
             new() { MenuName = "工作台", MenuCode = "dashboard", MenuType = 1, Path = "/dashboard", Component = "/dashboard/index", Icon = "HomeFilled", ParentId = 0, Sort = 1, Status = 1, CreateTime = DateTime.Now },
@@ -194,15 +157,17 @@ async Task InitDatabase(ISqlSugarClient db)
             new() { MenuName = "菜单管理", MenuCode = "menu", MenuType = 1, Path = "/system/menu", Component = "/system/menu/index", Icon = "Menu", ParentId = 2, Sort = 3, Status = 1, CreateTime = DateTime.Now },
             new() { MenuName = "组织管理", MenuCode = "org", MenuType = 1, Path = "/system/org", Component = "/system/org/index", Icon = "OfficeBuilding", ParentId = 2, Sort = 4, Status = 1, CreateTime = DateTime.Now }
         };
-        await db.Insertable(menus).ExecuteCommandAsync();
+        db.Insertable(menus).ExecuteCommand();
 
+        // Insert roles
         var roles = new List<SysRole>
         {
             new() { RoleName = "超级管理员", RoleCode = "super_admin", Sort = 1, Status = 1, CreateTime = DateTime.Now },
             new() { RoleName = "普通用户", RoleCode = "user", Sort = 2, Status = 1, CreateTime = DateTime.Now }
         };
-        await db.Insertable(roles).ExecuteCommandAsync();
+        db.Insertable(roles).ExecuteCommand();
 
+        // Insert role-menus
         var roleMenus = new List<SysRoleMenu>
         {
             new() { RoleId = 1, MenuId = 1 },
@@ -212,19 +177,13 @@ async Task InitDatabase(ISqlSugarClient db)
             new() { RoleId = 1, MenuId = 5 },
             new() { RoleId = 1, MenuId = 6 }
         };
-        await db.Insertable(roleMenus).ExecuteCommandAsync();
+        db.Insertable(roleMenus).ExecuteCommand();
 
+        // Assign admin to super_admin role
         var userRoles = new List<SysUserRole>
         {
             new() { UserId = 1, RoleId = 1 }
         };
-        await db.Insertable(userRoles).ExecuteCommandAsync();
+        db.Insertable(userRoles).ExecuteCommand();
     }
-}
-
-string HashPassword(string password)
-{
-    using var sha256 = System.Security.Cryptography.SHA256.Create();
-    var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-    return Convert.ToBase64String(hashedBytes);
 }

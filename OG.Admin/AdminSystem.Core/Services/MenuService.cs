@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AdminSystem.Core.DTOs;
 using AdminSystem.Core.Entities;
 using AdminSystem.Core.Interfaces;
@@ -17,7 +21,7 @@ public class MenuService : IMenuService
     public async Task<List<MenuDto>> GetAllAsync()
     {
         var list = await _db.Queryable<SysMenu>()
-            .OrderBy(x => x.Sort)
+            .OrderBy(x => x.Sort, OrderByType.Asc)
             .ToListAsync();
 
         return list.Select(MapToDto).ToList();
@@ -26,7 +30,7 @@ public class MenuService : IMenuService
     public async Task<List<MenuDto>> GetTreeAsync()
     {
         var list = await _db.Queryable<SysMenu>()
-            .OrderBy(x => x.Sort)
+            .OrderBy(x => x.Sort, OrderByType.Asc)
             .ToListAsync();
 
         return BuildTree(list, 0);
@@ -41,7 +45,7 @@ public class MenuService : IMenuService
         return menu != null ? MapToDto(menu) : null;
     }
 
-    public async Task<MenuDto> CreateAsync(CreateMenuRequest request)
+    public async Task<long> CreateAsync(CreateMenuRequest request)
     {
         var menu = new SysMenu
         {
@@ -62,11 +66,11 @@ public class MenuService : IMenuService
             Remark = request.Remark
         };
 
-        await _db.Insertable(menu).ExecuteCommandAsync();
-        return (await GetByIdAsync(menu.Id))!;
+        var menuId = await _db.Insertable(menu).ExecuteReturnSnowflakeIdAsync();
+        return menuId;
     }
 
-    public async Task<MenuDto> UpdateAsync(long id, UpdateMenuRequest request)
+    public async Task UpdateAsync(long id, UpdateMenuRequest request)
     {
         var menu = await _db.Queryable<SysMenu>()
             .Where(x => x.Id == id)
@@ -94,11 +98,19 @@ public class MenuService : IMenuService
         menu.Remark = request.Remark;
 
         await _db.Updateable(menu).ExecuteCommandAsync();
-        return (await GetByIdAsync(id))!;
     }
 
     public async Task DeleteAsync(long id)
     {
+        var menu = await _db.Queryable<SysMenu>()
+            .Where(x => x.Id == id)
+            .FirstAsync();
+
+        if (menu == null)
+        {
+            throw new Exception("菜单不存在");
+        }
+
         var hasChildren = await _db.Queryable<SysMenu>()
             .Where(x => x.ParentId == id)
             .AnyAsync();
@@ -124,18 +136,18 @@ public class MenuService : IMenuService
             .Select(x => x.MenuId)
             .ToListAsync();
 
-        var list = await _db.Queryable<SysMenu>()
+        var menus = await _db.Queryable<SysMenu>()
             .Where(x => menuIds.Contains(x.Id))
-            .OrderBy(x => x.Sort)
             .ToListAsync();
 
-        return list.Select(MapToDto).ToList();
+        return menus.Select(MapToDto).ToList();
     }
 
     private List<MenuDto> BuildTree(List<SysMenu> list, long parentId)
     {
         return list
-            .Where(x => x.ParentId == parentId)
+            .Where(x => x.ParentId == parentId || (x.ParentId == null && parentId == 0))
+            .OrderBy(x => x.Sort)
             .Select(x => new MenuDto
             {
                 Id = x.Id,

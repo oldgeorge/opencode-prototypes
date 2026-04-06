@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using SqlSugar;
 
 namespace AdminSystem.Core.Entities;
@@ -36,6 +38,6 @@ public class SysUser
 
     public string? Remark { get; set; }
 
-    [Navigate(NavigateType.ManyToMany, typeof(SysUserRole))]
+    [Navigate(NavigateType.ManyToMany, "SysUserRole")]
     public List<SysRole>? Roles { get; set; }
 }
